@@ -8,7 +8,7 @@ import {
   toggleTarget
 } from '../src/themePolicy';
 
-test('system and scheduled modes enforce the exact HBuilderX theme', () => {
+test('requested theme switches select the exact HBuilderX theme', () => {
   assert.equal(needsThemeSwitch('Default Dark Modern', 'dark'), true);
   assert.equal(needsThemeSwitch(DARK_THEME, 'dark'), false);
   assert.equal(needsThemeSwitch('Default Light Modern', 'light'), true);

@@ -4,6 +4,16 @@ All notable changes to the "HBuilderX Soft Green Light Theme" extension will be 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.1.2] - 2026-09-09
+
+### Fixed
+
+- Default to manual mode and stop modifying native system detection or preferred light/dark themes in all modes
+- Leave system-mode configuration to the user; manual and system activation no longer write editor preferences
+- Pause scheduled/seasonal switching and skip manual toggles with a warning when native auto-detection is enabled
+- Prevent pending automatic updates from restarting timers after switching to manual mode or deactivating
+- Document how to review preferences overwritten by older versions without guessing or resetting user choices
+
 ## [1.1.1] - 2026-08-31
 
 ### Fixed

@@ -37,7 +37,8 @@ export function activate(context: vscode.ExtensionContext): void {
   // Listen for configuration changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('hbuilderxSoftGreen')) {
+      if (e.affectsConfiguration('hbuilderxSoftGreen') ||
+          e.affectsConfiguration('window.autoDetectColorScheme')) {
         runThemeUpdate();
       }
     })

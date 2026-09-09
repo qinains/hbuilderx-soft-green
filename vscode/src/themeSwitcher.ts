@@ -2,8 +2,6 @@ import * as vscode from 'vscode';
 import { getConfig, updateConfig } from './configManager';
 import { getCurrentSeasonalTimes, parseTime } from './seasonalTimes';
 import {
-  DARK_THEME,
-  LIGHT_THEME,
   ThemeKind,
   needsThemeSwitch,
   shouldBeLightAtTime,
@@ -12,6 +10,7 @@ import {
 } from './themePolicy';
 
 let nextSwitchTimeout: ReturnType<typeof setTimeout> | null = null;
+let switchGeneration = 0;
 
 function getConfiguredThemeName(): string {
   return vscode.workspace.getConfiguration('workbench').get<string>('colorTheme') || '';
@@ -24,41 +23,45 @@ function getActiveThemeKind(): ThemeKind {
     : 'light';
 }
 
-async function setNativeAutoDetect(enabled: boolean): Promise<void> {
-  await vscode.workspace.getConfiguration('window').update(
-    'autoDetectColorScheme',
-    enabled,
-    vscode.ConfigurationTarget.Global
+function hasNativeAutoDetectConflict(): boolean {
+  if (vscode.workspace.getConfiguration('window').get<boolean>('autoDetectColorScheme') !== true) {
+    return false;
+  }
+  vscode.window.showWarningMessage(
+    'HBuilderX Soft Green: Theme switching is paused because window.autoDetectColorScheme is enabled. ' +
+    'Use the editor\'s preferred light/dark themes, or disable this setting yourself to use extension switching. ' +
+    'Your preferences have not been changed.'
   );
+  return true;
 }
 
-async function configureSystemMode(): Promise<void> {
-  const workbench = vscode.workspace.getConfiguration('workbench');
-  await workbench.update('preferredLightColorTheme', LIGHT_THEME, vscode.ConfigurationTarget.Global);
-  await workbench.update('preferredDarkColorTheme', DARK_THEME, vscode.ConfigurationTarget.Global);
-  await setNativeAutoDetect(true);
-}
-
-export async function switchTheme(kind: ThemeKind): Promise<void> {
+export async function switchTheme(kind: ThemeKind): Promise<boolean> {
+  if (hasNativeAutoDetectConflict()) {
+    return false;
+  }
   if (!needsThemeSwitch(getConfiguredThemeName(), kind)) {
-    return;
+    return true;
   }
   await vscode.workspace.getConfiguration('workbench').update(
     'colorTheme',
     themeNameFor(kind),
     vscode.ConfigurationTarget.Global
   );
+  return true;
 }
 
 export async function toggleTheme(): Promise<void> {
-  const autoDetect = vscode.workspace.getConfiguration('window').get<boolean>('autoDetectColorScheme') === true;
-  const currentThemeName = autoDetect ? '' : getConfiguredThemeName();
+  if (hasNativeAutoDetectConflict()) {
+    return;
+  }
+  const currentThemeName = getConfiguredThemeName();
   const activeKind = getActiveThemeKind();
   await updateConfig('autoSwitchMode', 'manual');
-  await setNativeAutoDetect(false);
+  stopAutoSwitch();
   const nextTheme = toggleTarget(currentThemeName, activeKind);
-  await switchTheme(nextTheme);
-  vscode.window.showInformationMessage(`HBuilderX Soft Green: Switched to ${nextTheme} theme (manual mode)`);
+  if (await switchTheme(nextTheme)) {
+    vscode.window.showInformationMessage(`HBuilderX Soft Green: Switched to ${nextTheme} theme (manual mode)`);
+  }
 }
 
 export function shouldUseLightThemeNow(now = new Date()): boolean {
@@ -93,39 +96,41 @@ export function getNextSwitchTime(now = new Date()): Date {
 export async function startAutoSwitch(): Promise<void> {
   const config = getConfig();
   stopAutoSwitch();
-
-  if (config.autoSwitchMode === 'system') {
-    await configureSystemMode();
-    return;
-  }
-
-  await setNativeAutoDetect(false);
+  const generation = switchGeneration;
   if (config.autoSwitchMode === 'scheduled' || config.autoSwitchMode === 'seasonal') {
-    await applyScheduledTheme();
-    scheduleNextSwitch();
+    if (await applyScheduledTheme() && generation === switchGeneration) {
+      scheduleNextSwitch(generation);
+    }
   }
 }
 
 export function stopAutoSwitch(): void {
+  // Invalidate pending async updates as well as the currently registered timer.
+  switchGeneration++;
   if (nextSwitchTimeout) {
     clearTimeout(nextSwitchTimeout);
     nextSwitchTimeout = null;
   }
 }
 
-async function applyScheduledTheme(): Promise<void> {
+async function applyScheduledTheme(): Promise<boolean> {
   const desired: ThemeKind = shouldUseLightThemeNow() ? 'light' : 'dark';
-  await switchTheme(desired);
+  return switchTheme(desired);
 }
 
-function scheduleNextSwitch(): void {
+function scheduleNextSwitch(generation: number): void {
   const delay = Math.max(0, getNextSwitchTime().getTime() - Date.now());
   nextSwitchTimeout = setTimeout(() => {
+    if (generation !== switchGeneration) {
+      return;
+    }
+    nextSwitchTimeout = null;
     void applyScheduledTheme()
-      .then(() => {
+      .then(applied => {
         const mode = getConfig().autoSwitchMode;
-        if (mode === 'scheduled' || mode === 'seasonal') {
-          scheduleNextSwitch();
+        if (applied && generation === switchGeneration &&
+            (mode === 'scheduled' || mode === 'seasonal')) {
+          scheduleNextSwitch(generation);
         }
       })
       .catch(reportError);

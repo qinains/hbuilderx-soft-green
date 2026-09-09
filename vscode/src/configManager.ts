@@ -19,7 +19,7 @@ const CONFIG_SECTION = 'hbuilderxSoftGreen';
 export function getConfig(): ThemeConfig {
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
   return {
-    autoSwitchMode: config.get<SwitchMode>('autoSwitchMode') || 'system',
+    autoSwitchMode: config.get<SwitchMode>('autoSwitchMode') || 'manual',
     lightTime: config.get<string>('lightTime') || '07:00',
     darkTime: config.get<string>('darkTime') || '19:00'
   };
@@ -38,6 +38,14 @@ export async function updateConfig(key: string, value: unknown): Promise<void> {
  */
 export async function setMode(mode: SwitchMode): Promise<void> {
   await updateConfig('autoSwitchMode', mode);
+  if (mode === 'system') {
+    vscode.window.showInformationMessage(
+      'HBuilderX Soft Green: System mode uses your existing editor preferences. ' +
+      'Configure window.autoDetectColorScheme and workbench.preferredLightColorTheme / ' +
+      'workbench.preferredDarkColorTheme in Settings if desired; this extension does not change them.'
+    );
+    return;
+  }
   vscode.window.showInformationMessage(`HBuilderX Soft Green: Mode set to ${mode}`);
 }
 

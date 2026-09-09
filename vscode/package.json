@@ -2,7 +2,7 @@
 	"name": "theme-hbuilderx-soft-green-light",
 	"displayName": "%displayName%",
 	"description": "%description%",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"homepage": "https://github.com/qinains/hbuilderx-soft-green/blob/main/README.md",
 	"repository": {
 		"type": "git",
@@ -85,13 +85,13 @@
 						"manual"
 					],
 					"enumDescriptions": [
-						"Follow the system color scheme using the editor's native setting",
-						"Switch at scheduled times",
-						"Auto-adjust by season (approx sunrise/sunset)",
-						"Manual switch only"
+						"Leave system theme switching to your existing editor settings (does not configure them)",
+						"Opt in to switching at scheduled times; pauses while native auto-detection is enabled",
+						"Opt in to seasonal switching (approx sunrise/sunset); pauses while native auto-detection is enabled",
+						"No automatic changes; select or toggle a theme yourself"
 					],
-					"default": "system",
-					"description": "Auto-switch mode for dark/light theme"
+					"default": "manual",
+					"description": "Optional dark/light theme switching. Never changes native auto-detection or preferred light/dark themes."
 				},
 				"hbuilderxSoftGreen.lightTime": {
 					"type": "string",
